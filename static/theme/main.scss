@@ -1,0 +1,195 @@
+a:focus,
+a:active {
+  outline: none;
+}
+
+a,
+a:focus,
+a:hover {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+-webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+-webkit-user-select: none;
+-moz-user-focus: none;
+-moz-user-select: none;
+}
+
+li {
+	list-style-type: none;
+}
+
+body,html,.wrapper,#app{
+    margin: 0;
+    padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
+
+html{
+	/*之后的所有涉及到字体大小的都用rem表示，html中的字体大小是他们的根*/
+	@media screen and (max-width:600px){
+		font-size:75%;
+	}
+	@media screen and (min-width:600px) and (max-width:1200px){
+		font-size: 87.5%;
+	}
+	@media screen and (min-width:1200px){
+		font-size:100%;
+	}
+}
+
+body {
+	-moz-osx-font-smoothing: grayscale;
+  	-webkit-font-smoothing: antialiased;
+  	text-rendering: optimizeLegibility;
+	font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+	
+	// -webkit-user-select:none;
+    // -moz-user-select:none;
+    // -ms-user-select:none;
+    // user-select:none;
+}
+
+.clearfix {
+  &:after {
+		visibility: hidden;
+		display: block;
+		font-size: 0;
+		content: " ";
+		clear: both;
+		height: 0;
+  }
+}
+
+.anchorBL{
+	display:none
+}
+
+.el-menu {
+	padding-right: 15px;
+}
+.navi {
+	display: block;
+	width: 17%;
+	position: fixed;
+	z-index:9999;
+	left:0;
+	height: 100%;
+	> ul {
+		height: 100%;
+	}
+	.open-close {
+		position: absolute;
+		width:20px;
+		font-size: 16px;
+		padding:2px;
+		border-radius: 10px 0 0 10px;
+		right:0;
+		top:50%;
+		height: 60px;
+		line-height: 30px;
+		margin-top:-30px;
+	}
+}
+
+.content {
+	position: relative;
+	float: left;
+	height: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding: 4px;
+	div .el-row{
+		margin-top: -2px;
+		margin-bottom: -2px;
+		margin-left: -2px !important;
+		margin-right: -2px !important;
+		.el-col {
+			padding-top:2px;
+			padding-bottom:2px;
+			padding-left:2px !important;
+			padding-right:2px !important;
+		}
+	}
+}
+
+.grid-content .main {
+	width: 100%;
+}
+.welcome {
+	top:0;
+}
+
+@mixin animationThings($name:event,$duration:1s,$iteration-count:1,$fill-mode:forwards,$delay:0s) {
+	animation-name:$name;
+	animation-duration: $duration;
+	animation-delay: $delay;
+	animation-iteration-count: $iteration-count;
+	animation-fill-mode: $fill-mode;
+	-webkit-animation-name:$name;
+	-webkit-animation-duration: $duration;
+	-webkit-animation-delay: $delay;
+	-webkit-animation-iteration-count: $iteration-count;
+	-webkit-animation-fill-mode: $fill-mode;
+}
+
+@mixin translx($distance:0) {
+	transform: translateX($distance);
+	-webkit-transform: translateX($distance);
+}
+
+.moveLeft {
+	@include animationThings(navigateMoveLeft);
+	@at-root {
+		@keyframes navigateMoveLeft {
+			to {
+				@include translx(-100%);
+			}
+		}
+		@-webkit-keyframes navigateMoveLeft {
+			to {
+				@include translx(-100%);
+			}
+		}
+	}
+}
+
+.moveRight {
+	@include animationThings(navigateMoveRight);
+	@at-root{
+		@keyframes navigateMoveRight {
+			from {
+				@include translx(-100%);
+			}
+		}
+		@-webkit-keyframes navigateMoveRight {
+			from {
+				@include translx(-100%);
+			}
+		}
+
+	}
+}
+
+.navigateButtonOut{
+	@include animationThings(navigateButtonOut,0.4s,1,forwards,1s);
+	@at-root {
+		@keyframes navigateButtonOut {
+			to {
+				border-radius: 0 10px 10px 0;
+				@include translx(100%);
+			}
+		}
+		@-webkit-keyframes navigateButtonOut {
+			to {
+				border-radius: 0 10px 10px 0;
+				@include translx(100%);
+			}
+		}
+	}
+}
