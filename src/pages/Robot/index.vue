@@ -1,13 +1,14 @@
 <template>
   <div class="container">
     <div class="header">
-      <img src="/static/assets/robot.png">
+      <img src="../../../static/assets/robot.png" />
       <span>机器人客服</span>
     </div>
     <div class="communicate" ref="comm">
       <div v-for="(item, index) in list" :key="index" :class="item.owe ? 'flex-right bg-owe': ''">
         <div class="item fontSize-14" v-if="item.type==='2'">
-          <a @click.prevent="playRecording(item)">
+          <span v-if="!playVoiceApi.enable">{{item.text}}</span>
+          <a @click.prevent="playRecording(item)" v-if="playVoiceApi.enable">
             {{item.text}}
             <span>{{item.second}}''</span>
             <div class="voiceIcon">
@@ -49,22 +50,27 @@
           </template>
         </div>
         <div class="item" v-if="item.type==='url'">
-            <a :href="item.url" target="_blank"> {{item.url}}</a>
+          <a :href="item.url" target="_blank">{{item.url}}</a>
         </div>
       </div>
     </div>
     <div class="guide" :class="{'show': guideShow}">
-        <template v-if="footer&&Object.prototype.toString.call(footer)==='[object Array]'">
-<a class="guide-btn" v-for="(ft, cdx) in footer" :key="cdx" @click.prevent="guideSearch(ft)">{{ft.DAD054}}</a>
-        </template>
-        
+      <template v-if="footer&&Object.prototype.toString.call(footer)==='[object Array]'">
+        <a
+          class="guide-btn"
+          v-for="(ft, cdx) in footer"
+          :key="cdx"
+          @click.prevent="guideSearch(ft)"
+        >{{ft.DAD054}}</a>
+      </template>
+
       <!-- <a class="guide-btn" @click.prevent="initRobot">初始化引导</a> -->
     </div>
     <div class="wordin">
       <div class="left">
         <a @click.prevent="changeInputType">
-          <img v-show="inputType === '0'" src="/static/assets/yy_btn.png" />
-          <img v-show="inputType === '1'" src="/static/assets/jp_btn.png" />
+          <img v-show="inputType === '0'" src="../../../static/assets/yy_btn.png" />
+          <img v-show="inputType === '1'" src="../../../static/assets/jp_btn.png" />
         </a>
       </div>
       <div class="right">
@@ -74,7 +80,7 @@
           </div>
           <a class="send" @click.prevent="inputSearch">发送</a>
           <a class="send" @click.prevent="guideShow=!guideShow">
-              快捷
+            快捷
             <!-- <img :src="'/static/assets/导航.png'" /> -->
           </a>
         </div>
@@ -88,7 +94,7 @@
       </div>
     </div>
     <div class="saying" v-show="isrecordering">
-      <img src="/static/assets/saying.gif" />
+      <img src="../../../static/assets/saying.gif" />
     </div>
   </div>
 </template>
@@ -98,11 +104,19 @@ import axios from "axios";
 // const audioContext = new (window.audioContext || window.webkitAudioContext)();
 // const recorder = new Recorder(audioContext, {});
 import voiceIcon from "@/components/voiceIcon";
+import wxApiCheck from "@/util/wxApiCheck";
+const basePath = "/robot";
 export default {
   data() {
     return {
-      //   isRecording: false,
-      //   blob: null,
+      mustApis: {
+        list: ["startRecord", "stopRecord", "translateVoice"],
+        enable: false
+      },
+      playVoiceApi: {
+        name: "playVoice",
+        enable: false
+      },
       dad090s: {
         "4": "问答",
         "0": "引导",
@@ -120,17 +134,33 @@ export default {
       inputType: "0",
       searchText: "",
       list: [],
-      footer: null,
-      isAndroid:
-        navigator.userAgent.indexOf("Android") > -1 ||
-        navigator.userAgent.indexOf("Adr") > -1,
-      isiOS: !!navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)
+      footer: null
     };
   },
   components: {
     voiceIcon
   },
   methods: {
+    initApis() {
+      const self = this;
+      wxApiCheck([...this.mustApis.list, this.playVoiceApi.name])
+        .then(res => {
+          // 如：{"checkResult":{"chooseImage":true},"errMsg":"checkJsApi:ok"}
+          self.mustApis.enable = true;
+          self.mustApis.list.forEach(item => {
+            if (!res.checkResult[item]) {
+              self.mustApis.enable = false;
+              alert("当前不支持语音识别")
+              return false;
+            }
+          });
+          if (res.checkResult[self.playVoiceApi.name])
+            self.mustApis.enable = true;
+        })
+        .catch(err => {
+          console.log("微信检查api接口失败，请检查wx接口版本");
+        });
+    },
     scrollBottom() {
       const comm = this.$refs.comm;
       comm.scrollTop = comm.scrollHeight;
@@ -139,6 +169,7 @@ export default {
       window.scrollTo(0, 0);
     },
     changeInputType() {
+      if (!this.mustApis.enable) return;
       if (this.inputType === "0") {
         this.inputType = "1";
       } else if (this.inputType === "1") {
@@ -147,11 +178,9 @@ export default {
     },
     startRecording() {
       const self = this;
-      //   if (this.isiOS) {
-          self.startTimestamp = Date.now();
-          self.isrecordering = true
+      self.startTimestamp = Date.now();
+      self.isrecordering = true;
       wx.ready(function() {
-          
         wx.startRecord({
           cancel: function() {
             alert("用户拒绝授权录音");
@@ -159,13 +188,6 @@ export default {
         });
       });
       self.startTimestamp = Date.now();
-      //   this.intervalId = setInterval(function() {
-      //     self.seconds += 1;
-      //   }, 1000);
-      //   } else {
-      //     recorder.start().then(res => (this.isRecording = true));
-      //     const self = this;
-      //   }
     },
 
     stopRecording() {
@@ -173,15 +195,11 @@ export default {
       const self = this;
       clearInterval(this.intervalId);
       const second = Math.ceil((Date.now() - this.startTimestamp) / 1000);
-      self.isrecordering = false
-      //   self.seconds = 0;
-      //   if (this.isiOS) {
+      self.isrecordering = false;
       wx.ready(function() {
-        //   self.startTimestamp = Date.now();
         wx.stopRecord({
           success: function(res) {
             voice.localId = res.localId;
-
             wx.translateVoice({
               localId: voice.localId,
               complete: function(res) {
@@ -214,14 +232,6 @@ export default {
           }
         });
       });
-      //   } else {
-      //     try {
-      //       recorder.stop().then(res => (this.isRecording = false));
-      //       //   this.isRecording = false
-      //     } catch (err) {
-      //       console.log(err);
-      //     }
-      //   }
     },
     playRecording(item) {
       //  recorder.play(audio);
@@ -255,7 +265,7 @@ export default {
       })
         .then(data => {
           this.searchResult(data);
-          this.footer = data.footer
+          this.footer = data.footer;
         })
         .catch(err => {
           console.log(err);
@@ -269,7 +279,15 @@ export default {
     },
     searchResult(data) {
       console.log(data);
-      const { footer, guideword, page, pagestype, sites, answertext, url } = data;
+      const {
+        footer,
+        guideword,
+        page,
+        pagestype,
+        sites,
+        answertext,
+        url
+      } = data;
       switch (pagestype) {
         case "0":
           this.pushAndScroll({
@@ -278,7 +296,7 @@ export default {
             guideword,
             sites
           });
-        //   this.footer = footer;
+          //   this.footer = footer;
           break;
         case "1":
           this.pushAndScroll({
@@ -293,7 +311,7 @@ export default {
             page,
             sites
           });
-        //   this.footer = footer;
+          //   this.footer = footer;
           break;
         case "2":
           this.pushAndScroll({
@@ -301,18 +319,21 @@ export default {
             type: "3",
             text: answertext
           });
-        //   this.footer = footer;
+          //   this.footer = footer;
           break;
         case "3":
-            this.pushAndScroll({
-                owe: false,
-                type: "url",
-                url: url.substr(0, 4) === 'http' ? url :`http://222.92.101.92:8090${url}`
-            })
-            // this.footer = footer
-            break;
+          this.pushAndScroll({
+            owe: false,
+            type: "url",
+            url:
+              url.substr(0, 4) === "http"
+                ? url
+                : `http://222.92.101.92:8090${url}`
+          });
+          // this.footer = footer
+          break;
       }
-    //   return data
+      //   return data
     },
     navTab(item, type) {
       this.$set(item, "currentPageType", type);
@@ -326,13 +347,7 @@ export default {
           type: "3",
           text: text
         });
-        // if (st.DAD092 && st.DAD092 !== "") {
-        //   this.pushAndScroll({
-        //     owe: false,
-        //     type: "3",
-        //     text: st.DAD092
-        //   });
-        // } else {
+
         this.search({
           ptext: st,
           ptype: "02"
@@ -343,7 +358,6 @@ export default {
           .catch(err => {
             console.log(err);
           });
-        // }
       } else {
         alert("请输入内容");
       }
@@ -376,7 +390,7 @@ export default {
     search(params) {
       return new Promise((resolve, reject) => {
         axios({
-          url: "/api/search",
+          url: basePath + "/api/search",
           method: "post",
           data: params
         })
@@ -389,71 +403,82 @@ export default {
           });
       });
     },
+
     init() {
+      this.initApis();
       this.initRobot();
       axios({
-        url: "/api/oauth"
+        url: basePath + "/api/oauth"
       }).then(res => {
-        const accessToken = res.data.data;
-        // const { access_token, expires_in } = res.data.data
-        axios({
-          url: `/api/ticket`
-        }).then(res => {
-          // console.log(res)
-          const ticket = res.data.data;
-          const url = location.href.split("#")[0];
+        if (res.data.success === true) {
+          const accessToken = res.data.data;
+          // const { access_token, expires_in } = res.data.data
           axios({
-            url: `/api/signature?ticket=${ticket}&url=${url}`
+            url: basePath + `/api/ticket`
           }).then(res => {
-            console.log(res.data.data);
-            const { nonceStr, timestamp, signature } = res.data.data;
-            wx.config({
-              debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
-              appId: "wx4544272b904d046c", // 必填，公众号的唯一标识
-              timestamp, // 必填，生成签名的时间戳
-              nonceStr, // 必填，生成签名的随机串
-              signature, // 必填，签名
-              jsApiList: [
-                "checkJsApi",
-                "onMenuShareTimeline",
-                "onMenuShareAppMessage",
-                "onMenuShareQQ",
-                "onMenuShareWeibo",
-                "onMenuShareQZone",
-                "hideMenuItems",
-                "showMenuItems",
-                "hideAllNonBaseMenuItem",
-                "showAllNonBaseMenuItem",
-                "translateVoice",
-                "startRecord",
-                "stopRecord",
-                "onVoiceRecordEnd",
-                "playVoice",
-                "onVoicePlayEnd",
-                "pauseVoice",
-                "stopVoice",
-                "uploadVoice",
-                "downloadVoice",
-                "chooseImage",
-                "previewImage",
-                "uploadImage",
-                "downloadImage",
-                "getNetworkType",
-                "openLocation",
-                "getLocation",
-                "hideOptionMenu",
-                "showOptionMenu",
-                "closeWindow",
-                "scanQRCode",
-                "chooseWXPay",
-                "openProductSpecificView",
-                "addCard",
-                "chooseCard",
-                "openCard"
-              ] // 必填，需要使用的JS接口列表
-            });
+            // console.log(res)
+            if (res.data.success === true) {
+              const ticket = res.data.data;
+              const url = location.href.split("#")[0];
+              console.log(ticket)
+              axios({
+                url: basePath + `/api/signature?ticket=${ticket}&url=${url}`
+              }).then(res => {
+                console.log(res.data.data);
+                const { nonceStr, timestamp, signature } = res.data.data;
+                wx.config({
+                  debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
+                  appId: "wx4544272b904d046c", // 必填，公众号的唯一标识
+                  timestamp, // 必填，生成签名的时间戳
+                  nonceStr, // 必填，生成签名的随机串
+                  signature, // 必填，签名
+                  jsApiList: [
+                    "checkJsApi",
+                    "onMenuShareTimeline",
+                    "onMenuShareAppMessage",
+                    "onMenuShareQQ",
+                    "onMenuShareWeibo",
+                    "onMenuShareQZone",
+                    "hideMenuItems",
+                    "showMenuItems",
+                    "hideAllNonBaseMenuItem",
+                    "showAllNonBaseMenuItem",
+                    "translateVoice",
+                    "startRecord",
+                    "stopRecord",
+                    "onVoiceRecordEnd",
+                    "playVoice",
+                    "onVoicePlayEnd",
+                    "pauseVoice",
+                    "stopVoice",
+                    "uploadVoice",
+                    "downloadVoice",
+                    "chooseImage",
+                    "previewImage",
+                    "uploadImage",
+                    "downloadImage",
+                    "getNetworkType",
+                    "openLocation",
+                    "getLocation",
+                    "hideOptionMenu",
+                    "showOptionMenu",
+                    "closeWindow",
+                    "scanQRCode",
+                    "chooseWXPay",
+                    "openProductSpecificView",
+                    "addCard",
+                    "chooseCard",
+                    "openCard"
+                  ] // 必填，需要使用的JS接口列表
+                });
+              });
+            } else {
+              console.log(res.data.data)
+            }
           });
-        });
+        } else {
+          console.log(res.data.data)
+        }
       });
     }
   },
@@ -468,7 +493,7 @@ $wordin-height: 40px;
 $guide-height: 36px;
 // $communicate-height: calc(100% - #{$header-height} - #{$wordin-height} - #{$guide-height});
 .fontSize-14 {
-    font-size: 14px;
+  font-size: 14px;
 }
 .container {
   width: 100%;
@@ -486,19 +511,19 @@ $guide-height: 36px;
     align-items: center;
     color: #fff;
     & > img {
-        width: 36px;
-        height: auto;
-        margin-left: 10px;
-        // position: absolute;
-        // left: 50%;
-        // top: 0;
-        // margin-left: -30px;
+      width: 36px;
+      height: auto;
+      margin-left: 10px;
+      // position: absolute;
+      // left: 50%;
+      // top: 0;
+      // margin-left: -30px;
     }
     & > span {
-        margin-left: 5px;
-        font-size: 16px;
-        // color: #fff;
-        font-weight: bold;
+      margin-left: 5px;
+      font-size: 16px;
+      // color: #fff;
+      font-weight: bold;
     }
   }
 
@@ -571,7 +596,7 @@ $guide-height: 36px;
           margin-top: 5px;
           &:active {
             color: blue;
-            -webkit-tap-highlight-color:blue;
+            -webkit-tap-highlight-color: blue;
           }
         }
       }
@@ -581,8 +606,7 @@ $guide-height: 36px;
       }
       .site {
         //   height: fit-content;
-          padding: 5px;
-        
+        padding: 5px;
       }
     }
   }
@@ -603,8 +627,8 @@ $guide-height: 36px;
       height: 36px;
       padding: 0 10px;
       box-sizing: border-box;
-        border-top: 1px solid #f2f2f2;
-        overflow: hidden;
+      border-top: 1px solid #f2f2f2;
+      overflow: hidden;
     }
     .guide-btn {
       height: 28px;
@@ -617,7 +641,7 @@ $guide-height: 36px;
       background: #f2f2f2;
       color: #2eb9ff;
       &:not(:first-child) {
-          margin-left: 10px;
+        margin-left: 10px;
       }
     }
   }

@@ -21,6 +21,10 @@ module.exports = {
         // pathRewrite: {
         //   '^/myrobot': ''   //重写接口
         // }
+      },
+      '/robot/api/*': {
+        target: 'http://222.92.101.92:8090',
+        changeOrigin: true,
       }
     },
 
@@ -62,7 +66,7 @@ module.exports = {
     // Paths
     assetsRoot: path.resolve(__dirname, '../dist'),
     assetsSubDirectory: 'static',
-    assetsPublicPath: '/',
+    assetsPublicPath: '/robot',
 
     /**
      * Source Maps

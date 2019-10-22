@@ -19,7 +19,8 @@ const initAccessToken = () => {
         if(cache.get('access_token')) {
             resolve(cache.get('access_token'))
         } else {
-            request.get(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${app.appid}&secret=${app.secret}`, (err, response, body) => {
+            //https://api.weixin.qq.com/cgi-bin
+            request.get(`http://222.92.101.92:8090/robot/sign/token?grant_type=client_credential&appid=${app.appid}&secret=${app.secret}`, (err, response, body) => {
                 if(err) {
                     reject(err)
                 } else if (response.statusCode === 200) {
@@ -33,6 +34,7 @@ const initAccessToken = () => {
                     
                 } else {
                     // 判断错误状态码 进行返回
+                    reject(response)
                 }
                 
             })
@@ -46,7 +48,7 @@ const initTicket = () => {
             resolve(cache.get('ticket'))
         } else {
             initAccessToken().then(accessToken => {
-                request.get(`https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=${accessToken}&type=jsapi`, (err, response, body) => {
+                request.get(`http://222.92.101.92:8090/robot/sign/ticket/getticket?access_token=${accessToken}&type=jsapi`, (err, response, body) => {
                     if(err) {
                         reject(err)
                     } else if (response.statusCode === 200) {
@@ -60,6 +62,7 @@ const initTicket = () => {
                         
                     } else {
                         // 判断错误状态码 进行返回
+                        reject(response)
                     }
                     
                 })
