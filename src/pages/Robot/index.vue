@@ -68,7 +68,10 @@
     </div>
     <div class="wordin">
       <div class="left">
-        <a @click.prevent="changeInputType">
+        <span v-if="loadingWx">
+          <img src="../../../static/assets/loading.gif" />
+        </span>
+        <a @click.prevent="changeInputType" v-show="!loadingWx">
           <img v-show="inputType === '0'" src="../../../static/assets/yy_btn.png" />
           <img v-show="inputType === '1'" src="../../../static/assets/jp_btn.png" />
         </a>
@@ -109,6 +112,7 @@ const basePath = "/robot";
 export default {
   data() {
     return {
+      loadingWx: true,
       mustApis: {
         list: ["startRecord", "stopRecord", "translateVoice"],
         enable: false
@@ -146,16 +150,8 @@ export default {
       wxApiCheck([...this.mustApis.list, this.playVoiceApi.name])
         .then(res => {
           // 如：{"checkResult":{"chooseImage":true},"errMsg":"checkJsApi:ok"}
-          self.mustApis.enable = true;
-          self.mustApis.list.forEach(item => {
-            if (!res.checkResult[item]) {
-              self.mustApis.enable = false;
-              alert("当前不支持语音识别")
-              return false;
-            }
-          });
-          if (res.checkResult[self.playVoiceApi.name])
-            self.mustApis.enable = true;
+          self.mustApis.enable = !(self.mustApis.list.findIndex(ele => res.checkResult[ele] === false) > 0)
+          if (res.checkResult[self.playVoiceApi.name]) self.playVoiceApi.enable = true
         })
         .catch(err => {
           console.log("微信检查api接口失败，请检查wx接口版本");
@@ -169,8 +165,11 @@ export default {
       window.scrollTo(0, 0);
     },
     changeInputType() {
-      if (!this.mustApis.enable) return;
-      if (this.inputType === "0") {
+      // if (!this.mustApis.enable) {
+      //   alert("当前不支持语音识别")
+      //   return;
+      // }
+      if (this.inputType === "0" && this.mustApis.enable) {
         this.inputType = "1";
       } else if (this.inputType === "1") {
         this.inputType = "0";
@@ -203,7 +202,6 @@ export default {
             wx.translateVoice({
               localId: voice.localId,
               complete: function(res) {
-                console.log(res);
                 if (res.hasOwnProperty("translateResult")) {
                   self.list.push({
                     owe: true,
@@ -278,7 +276,6 @@ export default {
       });
     },
     searchResult(data) {
-      console.log(data);
       const {
         footer,
         guideword,
@@ -377,7 +374,6 @@ export default {
           ptype: "03"
         })
           .then(data => {
-            console.log(data);
             this.searchResult(data);
           })
           .catch(err => {
@@ -405,7 +401,11 @@ export default {
     },
 
     init() {
-      this.initApis();
+      const self = this
+      wx.ready(function() {
+        self.loadingWx = false
+      })
+
       this.initRobot();
       axios({
         url: basePath + "/api/oauth"
@@ -419,12 +419,12 @@ export default {
             // console.log(res)
             if (res.data.success === true) {
               const ticket = res.data.data;
-              const url = location.href.split("#")[0];
-              console.log(ticket)
+              const url = location.href.split("#")[0]
+              // url = 'http://robot.lxf.in/robot'
+              const encodeUrl = encodeURIComponent(url)
               axios({
-                url: basePath + `/api/signature?ticket=${ticket}&url=${url}`
+                url: basePath + `/api/signature?ticket=${ticket}&url=${encodeUrl}`
               }).then(res => {
-                console.log(res.data.data);
                 const { nonceStr, timestamp, signature } = res.data.data;
                 wx.config({
                   debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
@@ -434,43 +434,20 @@ export default {
                   signature, // 必填，签名
                   jsApiList: [
                     "checkJsApi",
-                    "onMenuShareTimeline",
-                    "onMenuShareAppMessage",
-                    "onMenuShareQQ",
-                    "onMenuShareWeibo",
-                    "onMenuShareQZone",
-                    "hideMenuItems",
-                    "showMenuItems",
-                    "hideAllNonBaseMenuItem",
-                    "showAllNonBaseMenuItem",
                     "translateVoice",
                     "startRecord",
                     "stopRecord",
-                    "onVoiceRecordEnd",
                     "playVoice",
-                    "onVoicePlayEnd",
-                    "pauseVoice",
-                    "stopVoice",
-                    "uploadVoice",
-                    "downloadVoice",
-                    "chooseImage",
-                    "previewImage",
-                    "uploadImage",
-                    "downloadImage",
-                    "getNetworkType",
-                    "openLocation",
-                    "getLocation",
-                    "hideOptionMenu",
-                    "showOptionMenu",
-                    "closeWindow",
-                    "scanQRCode",
-                    "chooseWXPay",
-                    "openProductSpecificView",
-                    "addCard",
-                    "chooseCard",
-                    "openCard"
                   ] // 必填，需要使用的JS接口列表
-                });
+                })
+
+                wx.ready(function() {
+                  self.initApis();
+                })
+
+                wx.error(function(res){
+                  alert('wx.config出错:，出错信息：' + JSON.stringify(res))
+                })
               });
             } else {
               console.log(res.data.data)
@@ -668,7 +645,11 @@ $guide-height: 36px;
     .left {
       box-sizing: border-box;
       border-right: 0.5px solid #f2f2f2;
-      a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      // padding: 0 10px;
+      a, span {
         display: flex;
         padding: 5px;
         & > img {
