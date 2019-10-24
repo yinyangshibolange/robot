@@ -10,17 +10,15 @@ const sign = require("../util/sign")
 /**
  *  中控服务器, 获取和刷新accessToken
  */
-const app = {
-    appid: 'wx4544272b904d046c',
-    secret: 'ec4c498427503ea922b91beb8f47cd45',
-}
+const app = require("./app.json")
+
 const initAccessToken = () => {
     return new Promise((resolve, reject) => {
         if(cache.get('access_token')) {
             resolve(cache.get('access_token'))
         } else {
             //https://api.weixin.qq.com/cgi-bin
-            request.get(`http://222.92.101.92:8090/robot/sign/token?grant_type=client_credential&appid=${app.appid}&secret=${app.secret}`, (err, response, body) => {
+            request.get(`http://192.173.2.1:8090/wxjk/token?grant_type=client_credential&appid=${app.appid}&secret=${app.secret}`, (err, response, body) => {
                 if(err) {
                     reject(err)
                 } else if (response.statusCode === 200) {
@@ -48,7 +46,7 @@ const initTicket = () => {
             resolve(cache.get('ticket'))
         } else {
             initAccessToken().then(accessToken => {
-                request.get(`http://222.92.101.92:8090/robot/sign/ticket/getticket?access_token=${accessToken}&type=jsapi`, (err, response, body) => {
+                request.get(`http://192.173.2.1:8090/wxjk/ticket/getticket?access_token=${accessToken}&type=jsapi`, (err, response, body) => {
                     if(err) {
                         reject(err)
                     } else if (response.statusCode === 200) {
