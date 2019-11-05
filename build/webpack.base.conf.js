@@ -21,9 +21,7 @@ function resolve (dir) {
 
 module.exports = {
   context: path.resolve(__dirname, '../'),
-  entry: {
-    app: './src/main.js'
-  },
+  entry: ["babel-polyfill", "./src/main.js"],
   externals: {
     'BMap': 'BMap',
     'wx': 'wx'

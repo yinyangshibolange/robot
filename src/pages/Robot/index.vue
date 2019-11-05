@@ -5,7 +5,7 @@
       <span>机器人客服</span>
     </div>
     <div class="communicate" ref="comm">
-      <div v-for="(item, index) in list" :key="index" :class="item.owe ? 'flex-right bg-owe': ''">
+      <div v-for="(item, index) in list" :key="index" :class="item.owe ? 'flex-right bg-owe': 'bg-robot'">
         <div class="item fontSize-14" v-if="item.type==='2'">
           <span v-if="!playVoiceApi.enable">{{item.text}}</span>
           <a @click.prevent="playRecording(item)" v-if="playVoiceApi.enable">
@@ -60,14 +60,12 @@
           class="guide-btn"
           v-for="(ft, cdx) in footer"
           :key="cdx"
-          @click.prevent="guideSearch(ft)"
+          @click.prevent="guideSearch(ft);guideShow=false;"
         >{{ft.DAD054}}</a>
       </template>
-
-      <!-- <a class="guide-btn" @click.prevent="initRobot">初始化引导</a> -->
     </div>
     <div class="wordin">
-      <div class="left">
+      <div class="left" v-if="mustApis.enable">
         <span v-if="loadingWx">
           <img src="../../../static/assets/loading.gif" />
         </span>
@@ -84,15 +82,18 @@
           <a class="send" @click.prevent="inputSearch">发送</a>
           <a class="send" @click.prevent="guideShow=!guideShow">
             快捷
-            <!-- <img :src="'/static/assets/导航.png'" /> -->
           </a>
         </div>
         <div v-show="inputType === '1'">
           <a
             class="talk_btn"
+            :class="{'active': isrecordering}"
             @touchstart.prevent="startRecording"
             @touchend.prevent="stopRecording"
           >按住说话</a>
+          <a class="send" @click.prevent="guideShow=!guideShow">
+            快捷
+          </a>
         </div>
       </div>
     </div>
@@ -112,7 +113,7 @@ const basePath = "/robot";
 export default {
   data() {
     return {
-      loadingWx: true,
+      loadingWx: false,
       mustApis: {
         list: ["startRecord", "stopRecord", "translateVoice"],
         enable: false
@@ -169,6 +170,7 @@ export default {
       //   alert("当前不支持语音识别")
       //   return;
       // }
+
       if (this.inputType === "0" && this.mustApis.enable) {
         this.inputType = "1";
       } else if (this.inputType === "1") {
@@ -325,7 +327,7 @@ export default {
             url:
               url.substr(0, 4) === "http"
                 ? url
-                : `http://222.92.101.92:8090${url}`
+                : `http://www.labourtech.com${url}`
           });
           // this.footer = footer
           break;
@@ -399,14 +401,24 @@ export default {
           });
       });
     },
-
     init() {
+      this.initRobot()
+      const u = navigator.userAgent;
+      const isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1; //android终端
+      const isiOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终端
+      if(isAndroid || isiOS) {
+        this.initWxApi()
+      } else {
+
+      }
+      
+    },
+    initWxApi() {
       const self = this
+      this.loadingWx = true
       wx.ready(function() {
         self.loadingWx = false
       })
-
-      this.initRobot();
       axios({
         url: basePath + "/api/oauth"
       }).then(res => {
@@ -416,7 +428,6 @@ export default {
           axios({
             url: basePath + `/api/ticket`
           }).then(res => {
-            // console.log(res)
             if (res.data.success === true) {
               const ticket = res.data.data;
               const url = location.href.split("#")[0]
@@ -425,10 +436,10 @@ export default {
               axios({
                 url: basePath + `/api/signature?ticket=${ticket}&url=${encodeUrl}`
               }).then(res => {
-                const { nonceStr, timestamp, signature } = res.data.data;
+                const { nonceStr, timestamp, signature, appid } = res.data.data;
                 wx.config({
                   debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
-                  appId: "wx4544272b904d046c", // 必填，公众号的唯一标识
+                  appId: appid, // 必填，公众号的唯一标识
                   timestamp, // 必填，生成签名的时间戳
                   nonceStr, // 必填，生成签名的随机串
                   signature, // 必填，签名
@@ -466,7 +477,7 @@ export default {
 </script>
 <style lang="scss">
 $header-height: 40px;
-$wordin-height: 40px;
+$wordin-height: 46px;
 $guide-height: 36px;
 // $communicate-height: calc(100% - #{$header-height} - #{$wordin-height} - #{$guide-height});
 .fontSize-14 {
@@ -477,6 +488,7 @@ $guide-height: 36px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: #f2f2f2;
 
   .header {
     width: 100%;
@@ -491,15 +503,10 @@ $guide-height: 36px;
       width: 36px;
       height: auto;
       margin-left: 10px;
-      // position: absolute;
-      // left: 50%;
-      // top: 0;
-      // margin-left: -30px;
     }
     & > span {
       margin-left: 5px;
       font-size: 16px;
-      // color: #fff;
       font-weight: bold;
     }
   }
@@ -513,8 +520,25 @@ $guide-height: 36px;
     overflow-y: scroll;
     .bg-owe {
       .item {
-        background: #fff;
+        background: #95EC69;
+        &::after {
+          background: #95EC69;
+          right: -7px;
+          border-top: 1px solid #ccc;
+          border-right: 1px solid #ccc;
+        }
       }
+    }
+    .bg-robot {
+      .item {
+        &::after {
+          background: #fff;
+          left: -7px;
+          border-bottom: 1px solid #ccc;
+          border-left: 1px solid #ccc;
+        }
+      }
+
     }
     .flex-right {
       justify-content: flex-end;
@@ -531,8 +555,6 @@ $guide-height: 36px;
           & > a {
             display: inline-block;
             padding: 3px 5px;
-            // font-size: 14px;
-            // color: #2b8eff;
             border-bottom: 2px solid #fff;
             &.active {
               border-bottom: 2px solid #ff950a;
@@ -544,13 +566,22 @@ $guide-height: 36px;
         }
       }
       .item {
+        position: relative;
         padding: 12px;
         border-radius: 8px;
         border: 1px solid #ccc;
-        background: #f2f2f2;
         word-wrap: break-word;
         word-break: break-all;
-        // line-height: 20px;
+        background: #fff;
+        &::after {
+          content: ' ';
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          top: 20px;
+          margin-top: -7px;
+          transform: rotate(45deg);
+        }
         .voiceIcon {
           margin-left: 3px;
         }
@@ -570,7 +601,7 @@ $guide-height: 36px;
         a {
           color: #01abff;
           padding: 5px 0;
-          margin-top: 5px;
+          // margin-top: 5px;
           &:active {
             color: blue;
             -webkit-tap-highlight-color: blue;
@@ -582,7 +613,6 @@ $guide-height: 36px;
         margin-bottom: 10px;
       }
       .site {
-        //   height: fit-content;
         padding: 5px;
       }
     }
@@ -637,7 +667,7 @@ $guide-height: 36px;
   .wordin {
     width: 100%;
     height: $wordin-height;
-    border-top: 1px solid #f2f2f2;
+    border-top: 1px solid #fff;
     box-sizing: border-box;
     display: flex;
     flex-direction: row;
@@ -685,6 +715,8 @@ $guide-height: 36px;
           border: none;
           height: 28px;
           width: 100%;
+          font-size: 14px;
+          line-height: 28px;
           &:focus {
             outline: none;
           }
@@ -721,10 +753,16 @@ $guide-height: 36px;
       }
       .talk_btn {
         width: 100%;
-        height: 100%;
+        height: 36px;
         display: flex;
         justify-content: center;
         align-items: center;
+        background: #ffffff;
+        border: 1px solid #f2f2f2;
+        border-radius: 5px;
+        &.active {
+          background: #CACFD8;
+        }
       }
     }
   }

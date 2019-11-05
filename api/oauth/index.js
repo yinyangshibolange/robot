@@ -115,7 +115,10 @@ router.route('/api/signature')
         const ret = sign(ticket, url)
         res.send({
             success: true,
-            data: ret
+            data: {
+                ...ret,
+                appid: app.appid
+            }
         })
     })
 
