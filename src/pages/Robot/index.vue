@@ -17,6 +17,9 @@
           </a>
         </div>
         <div class="item fontSize-14" v-if="item.type==='3'">
+          <span v-html="item.text"></span>
+        </div>
+        <div class="item fontSize-14" v-if="item.type==='i3'">
           <span>{{item.text}}</span>
         </div>
         <div class="item sites" v-if="item.type==='f1'||item.type==='f2'||item.type==='f3'">
@@ -25,18 +28,24 @@
           </div>
           <template v-if="item.type==='f1'">
             <div class="site fontSize-14" v-for="(st, jedex) in item.sites" :key="jedex">
-              <span v-if="st.TTYPE">{{st.DAD054}}</span>
+              <span v-if="st.TTYPE" v-html="st.DAD054"></span>
               <a v-if="!st.TTYPE" @click.prevent="guideSearch(st)">{{st.DAD054}}</a>
             </div>
           </template>
           <template v-else-if="item.type==='f2'">
             <div class="tabs">
-              <a
+              <!-- <a
                 v-for="(pg, jedex) in item.page"
                 :class="{'active': pg.type === item.currentPageType}"
                 :key="jedex"
                 @click.prevent="navTab(item, pg.type)"
-              >{{dad090s[pg.type]}}</a>
+              >{{dad090s[pg.type]}}</a> -->
+              <a v-for="(pg, jedex) in pages"
+              :class="{'active': pg.type === item.currentPageType}"
+                :key="jedex"
+                @click.prevent="navTab(item, pg.type)">
+                {{pg.name}}
+                </a>
             </div>
             <div
               class="site fontSize-14"
@@ -44,13 +53,13 @@
               :key="jedex"
               v-show="st.DAD090===item.currentPageType"
             >
-              <span v-if="st.TTYPE">{{st.DAD054}}</span>
+              <span v-if="st.TTYPE" v-html="st.DAD054"></span>
               <a v-if="!st.TTYPE" @click.prevent="guideSearch(st)">{{st.DAD054}}</a>
             </div>
           </template>
         </div>
         <div class="item" v-if="item.type==='url'">
-          <a :href="item.url" target="_blank">{{item.url}}</a>
+          <a :href="item.url" target="_blank">点击跳转查看</a>
         </div>
       </div>
     </div>
@@ -60,7 +69,7 @@
           class="guide-btn"
           v-for="(ft, cdx) in footer"
           :key="cdx"
-          @click.prevent="guideSearch(ft);guideShow=false;"
+          @click.prevent="guideSearch(ft);"
         >{{ft.DAD054}}</a>
       </template>
     </div>
@@ -79,7 +88,7 @@
           <div class="input">
             <input v-model="searchText" @blur="scrollTop" />
           </div>
-          <a class="send" @click.prevent="inputSearch">发送</a>
+          <a class="send" @click.prevent="inputSearch">搜索</a>
           <a class="send" @click.prevent="guideShow=!guideShow">
             快捷
           </a>
@@ -129,7 +138,24 @@ export default {
         "2": "办事",
         "3": "材料"
       },
-      guideShow: false,
+      pages: [{
+        name: "问答",
+        type: "4",
+      }, {
+        name: "政策",
+        type: "1"
+      }, {
+        name: "办事",
+        type: "2"
+      }, {
+        name: "材料",
+        type: "3"
+      }, {
+        name: "引导",
+        type: "0"
+      }],
+      defaultPageType: "4", // 默认页面类型，不填则为"0"
+      guideShow: true,
       isrecordering: false,
       seconds: 0,
       startTimestamp: 0,
@@ -305,14 +331,15 @@ export default {
             currentPageType:
               Object.prototype.toString.call(page) === "[object Array]" &&
               page.length > 0
-                ? page[0].type
-                : "0",
+                ? (this.defaultPageType? this.defaultPageType: page[0].type)
+                : (this.defaultPageType? this.defaultPageType: "0"),
             page,
             sites
           });
           //   this.footer = footer;
           break;
         case "2":
+          // 这里是回答
           this.pushAndScroll({
             owe: false,
             type: "3",
@@ -329,7 +356,6 @@ export default {
                 ? url
                 : `http://www.labourtech.com${url}`
           });
-          // this.footer = footer
           break;
       }
       //   return data
@@ -341,9 +367,10 @@ export default {
       // const level = st.DAD009 // 层级1，2，3
       const text = st.DAD054;
       if (text && text !== "") {
+        // 这里是导航问问题
         this.pushAndScroll({
           owe: true,
-          type: "3",
+          type: "i3",
           text: text
         });
 
@@ -365,9 +392,10 @@ export default {
       const searchText = this.searchText;
       this.searchText = "";
       if (searchText && searchText !== "") {
+        // 这里是输入问问题
         this.pushAndScroll({
           owe: true,
-          type: "3",
+          type: "i3",
           text: searchText
         });
 
@@ -386,6 +414,7 @@ export default {
       }
     },
     search(params) {
+      params.prod = this.$route.query.prod ? this.$route.query.prod : '1'
       return new Promise((resolve, reject) => {
         axios({
           url: basePath + "/api/search",
@@ -393,7 +422,7 @@ export default {
           data: params
         })
           .then(res => {
-            // console.log(res);
+            // console.log(res.data.data);
             resolve(res.data.data);
           })
           .catch(err => {
@@ -472,6 +501,10 @@ export default {
   },
   mounted() {
     this.init();
+    const self = this
+    window.__proto__.guideSearch = function(st) {
+      self.guideSearch.call(self, st)
+    }
   }
 };
 </script>

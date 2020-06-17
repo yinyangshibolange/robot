@@ -5,7 +5,7 @@ import Robot from '@/pages/Robot'
 Vue.use(Router)
 
 export default new Router({
-  base: '/robot/',
+  base: '/robot',
   mode: 'history',
   routes: [
     {

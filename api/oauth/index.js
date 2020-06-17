@@ -10,7 +10,7 @@ const sign = require("../util/sign")
 /**
  *  中控服务器, 获取和刷新accessToken
  */
-const app = require("./app.json")
+const app = require("./prodapp.json")
 
 const initAccessToken = () => {
     return new Promise((resolve, reject) => {

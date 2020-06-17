@@ -1,12 +1,12 @@
 const express = require('express')
 const router = express.Router()
 const request = require("request")
-
+const thisurl = 'http://192.173.1.61/robot/search'
 const search = (data) => {
     return new Promise((resolve, reject) => {
         // console.log(data)
         request({
-            url: `http://192.173.1.70/robot/search`,
+            url: thisurl,
             method: 'POST',
             body: JSON.stringify(data)
         }, (err, response, body) => {
